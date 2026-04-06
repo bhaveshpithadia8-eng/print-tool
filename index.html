@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>kulcharCrez print cost calculator</title>
+ <title>Print Order Tool</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.2.4/fabric.min.js"></script>
 
@@ -21,8 +21,7 @@
 <body>
 
 <div class="container">
-
-<h2>Print cost</h2>
+<h2>💰 Print Cost</h2>
 
 <div class="card">
   <input type="file" id="upload">
@@ -32,6 +31,10 @@
     <option value="height">Max Height (10.5)</option>
   </select>
 
+  <input type="text" id="custName" placeholder="Your Name">
+  <input type="number" id="custPhone" placeholder="Your Number">
+
+  <button onclick="sendOrder()">Order on WhatsApp</button>
   <button onclick="clearCanvas()">Clear Image</button>
 </div>
 
@@ -57,6 +60,9 @@ let pixelToInch = 0.1;
 
 let mode = "width";
 
+// 👉 apna number dal
+let yourNumber = "91XXXXXXXXXX";
+
 // Upload
 document.getElementById('upload').addEventListener('change', function(e){
   var reader = new FileReader();
@@ -70,7 +76,7 @@ document.getElementById('upload').addEventListener('change', function(e){
       updatePrice();
 
       img.on('scaling', function(){
-        limitSize(img);
+        enforceLimit(img);
         canvas.renderAll();
         updatePrice();
       });
@@ -79,33 +85,37 @@ document.getElementById('upload').addEventListener('change', function(e){
   reader.readAsDataURL(e.target.files[0]);
 });
 
-// Mode apply (AUTO FIX 10.50)
+// Mode
 function applyLimitType(){
   mode = document.getElementById("limitType").value;
 
   if(!imgObj) return;
 
-  if(mode === "width"){
-    imgObj.scaleToWidth(maxSize / pixelToInch);
-  } else {
-    imgObj.scaleToHeight(maxSize / pixelToInch);
-  }
+  enforceLimit(imgObj);
 
   canvas.renderAll();
   updatePrice();
 }
 
-// 🔥 HARD LIMIT FUNCTION
-function limitSize(img){
-  let widthInch = (img.width * img.scaleX) * pixelToInch;
-  let heightInch = (img.height * img.scaleY) * pixelToInch;
+// 🔥 HARD LIMIT (PERFECT FIX)
+function enforceLimit(img){
+  let w = (img.width * img.scaleX) * pixelToInch;
+  let h = (img.height * img.scaleY) * pixelToInch;
 
-  if(mode === "width" && widthInch > maxSize){
-    img.scaleToWidth(maxSize / pixelToInch);
+  if(mode === "width"){
+    let scale = (maxSize / pixelToInch) / img.width;
+    if(w > maxSize){
+      img.scaleX = scale;
+      img.scaleY = scale;
+    }
   }
 
-  if(mode === "height" && heightInch > maxSize){
-    img.scaleToHeight(maxSize / pixelToInch);
+  if(mode === "height"){
+    let scale = (maxSize / pixelToInch) / img.height;
+    if(h > maxSize){
+      img.scaleX = scale;
+      img.scaleY = scale;
+    }
   }
 }
 
@@ -126,6 +136,29 @@ function updatePrice(){
     "Size: " + w.toFixed(2) + " × " + h.toFixed(2) + " inch";
 
   document.getElementById("price").innerHTML = "₹ " + price;
+}
+
+// WhatsApp
+function sendOrder(){
+  let name = document.getElementById("custName").value;
+  let phone = document.getElementById("custPhone").value;
+  let size = document.getElementById("size").innerText;
+  let price = document.getElementById("price").innerText;
+
+  if(!name || !phone || !imgObj){
+    alert("Fill all details & upload image");
+    return;
+  }
+
+  let msg = `New Order
+Name: ${name}
+Mobile: ${phone}
+${size}
+Price: ${price}`;
+
+  let url = `https://wa.me/${yourNumber}?text=${encodeURIComponent(msg)}`;
+
+  window.open(url, "_blank");
 }
 
 // Clear
