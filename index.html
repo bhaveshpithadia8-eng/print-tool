@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Print Order Tool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.2.4/fabric.min.js"></script>
+
+  <style>
+    body{margin:0;font-family:Arial;background:#f5f5f5;}
+    .container{padding:15px;max-width:500px;margin:auto;}
+    .card{background:white;padding:15px;border-radius:12px;margin-bottom:15px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+    input,select,button{width:100%;padding:12px;margin-top:8px;border-radius:8px;border:1px solid #ddd;font-size:16px;}
+    button{background:black;color:white;border:none;font-weight:bold;}
+    canvas{width:100%!important;border:1px solid #ccc;border-radius:10px;}
+    .sticky{position:fixed;bottom:0;left:0;width:100%;background:white;padding:10px;text-align:center;box-shadow:0 -2px 10px rgba(0,0,0,0.2);}
+    .price{font-size:20px;font-weight:bold;}
+    .info{font-size:14px;color:#555;}
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Print Order</h2>
+
+<div class="card">
+  <input type="file" id="upload">
+
+  <select id="limitType" onchange="applyLimitType()">
+    <option value="width">Max Width (10.5)</option>
+    <option value="height">Max Height (10.5)</option>
+  </select>
+
+  <input type="text" id="custName" placeholder="Your Name">
+  <input type="number" id="custPhone" placeholder="Mobile Number">
+
+  <button onclick="sendOrder()">Order on WhatsApp</button>
+  <button onclick="clearCanvas()">Clear Image</button>
+</div>
+
+<div class="card">
+  <canvas id="canvas" width="300" height="300"></canvas>
+  <div class="info" id="size"></div>
+</div>
+
+</div>
+
+<div class="sticky">
+  <div class="price" id="price">₹ 0</div>
+</div>
+
+<script>
+var canvas = new fabric.Canvas('canvas');
+var imgObj = null;
+
+let maxSize = 10.5;
+let chargeWidth = 11;
+let rate = 0.80;
+let pixelToInch = 0.1;
+let mode = "width";
+
+// 👉 अपना नंबर यहाँ डाल
+let yourNumber = "8140540508";
+
+// Upload
+document.getElementById('upload').addEventListener('change', function(e){
+  var reader = new FileReader();
+  reader.onload = function(f){
+    fabric.Image.fromURL(f.target.result, function(img){
+      canvas.clear();
+      canvas.add(img);
+      imgObj = img;
+
+      applyLimitType();
+      updatePrice();
+
+      img.on('scaling', function(){
+        limitSize(img);
+        updatePrice();
+      });
+    });
+  }
+  reader.readAsDataURL(e.target.files[0]);
+});
+
+// Mode
+function applyLimitType(){
+  mode = document.getElementById("limitType").value;
+
+  if(!imgObj) return;
+
+  if(mode === "width"){
+    imgObj.scaleToWidth(maxSize / pixelToInch);
+  } else {
+    imgObj.scaleToHeight(maxSize / pixelToInch);
+  }
+
+  updatePrice();
+}
+
+// Limit
+function limitSize(img){
+  let w = (img.width * img.scaleX) * pixelToInch;
+  let h = (img.height * img.scaleY) * pixelToInch;
+
+  if(mode === "width" && w > maxSize){
+    img.scaleToWidth(maxSize / pixelToInch);
+  }
+  if(mode === "height" && h > maxSize){
+    img.scaleToHeight(maxSize / pixelToInch);
+  }
+}
+
+// Price
+function updatePrice(){
+  if(!imgObj) return;
+
+  let w = (imgObj.width * imgObj.scaleX) * pixelToInch;
+  let h = (imgObj.height * imgObj.scaleY) * pixelToInch;
+
+  let price = chargeWidth * h * rate;
+
+  if(price < 30) price = 30;
+
+  price = Math.ceil(price);
+
+  document.getElementById("size").innerHTML =
+    "Size: " + w.toFixed(2) + " × " + h.toFixed(2) + " inch";
+
+  document.getElementById("price").innerHTML = "₹ " + price;
+}
+
+// WhatsApp
+function sendOrder(){
+  let name = document.getElementById("custName").value;
+  let phone = document.getElementById("custPhone").value;
+  let size = document.getElementById("size").innerText;
+  let price = document.getElementById("price").innerText;
+
+  if(!name || !phone || !imgObj){
+    alert("Fill all details & upload image");
+    return;
+  }
+
+  let msg = `New Order%0AName: ${name}%0AMobile: ${phone}%0A${size}%0APrice: ${price}`;
+
+  let url = `https://wa.me/${yourNumber}?text=${msg}`;
+
+  window.open(url, "_blank");
+}
+
+// Clear
+function clearCanvas(){
+  canvas.clear();
+  imgObj = null;
+  document.getElementById("size").innerHTML = "";
+  document.getElementById("price").innerHTML = "₹ 0";
+}
+</script>
+
+</body>
+</html>
